@@ -60,7 +60,7 @@ DEBUG = False
 def dbg(msg):
     global DEBUG
     if DEBUG:
-        print msg
+        print(msg)
         sys.stdout.flush()
 
 
@@ -102,7 +102,7 @@ class poller:
             target = self.targets.get(one_ready[0], None)
             if target:
                 target.do_read(one_ready[0])
- 
+
 
 # Base class for a generic UPnP device. This is far from complete
 # but it supports either specified or automatic IP address and port
@@ -123,7 +123,7 @@ class upnp_device(object):
             del(temp_socket)
             dbg("got local address of %s" % upnp_device.this_host_ip)
         return upnp_device.this_host_ip
-        
+
 
     def __init__(self, listener, poller, port, root_url, server_version, persistent_uuid, other_headers = None, ip_address = None):
         self.listener = listener
@@ -159,6 +159,7 @@ class upnp_device(object):
             self.client_sockets[client_socket.fileno()] = client_socket
         else:
             data, sender = self.client_sockets[fileno].recvfrom(4096)
+            data = data.decode('utf-8')
             if not data:
                 self.poller.remove(self, fileno)
                 del(self.client_sockets[fileno])
@@ -170,7 +171,7 @@ class upnp_device(object):
 
     def get_name(self):
         return "unknown"
-        
+
     def respond_to_search(self, destination, search_target):
         dbg("Responding to search for %s" % self.get_name())
         date_str = email.utils.formatdate(timeval=None, localtime=False, usegmt=True)
@@ -190,8 +191,8 @@ class upnp_device(object):
                 message += "%s\r\n" % header
         message += "\r\n"
         temp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        temp_socket.sendto(message, destination)
- 
+        temp_socket.sendto(message.encode('utf-8'), destination)
+
 
 # This subclass does the bulk of the work to mimic a WeMo switch on the network.
 
@@ -231,7 +232,7 @@ class fauxmo(upnp_device):
                        "CONNECTION: close\r\n"
                        "\r\n"
                        "%s" % (len(xml), date_str, xml))
-            socket.send(message)
+            socket.send(message.encode('utf-8'))
         elif data.find('SOAPACTION: "urn:Belkin:service:basicevent:1#SetBinaryState"') != -1:
             success = False
             if data.find('<BinaryState>1</BinaryState>') != -1:
@@ -260,7 +261,7 @@ class fauxmo(upnp_device):
                            "CONNECTION: close\r\n"
                            "\r\n"
                            "%s" % (len(soap), date_str, soap))
-                socket.send(message)
+                socket.send(message.encode('utf-8'))
         else:
             dbg(data)
 
@@ -300,17 +301,17 @@ class upnp_broadcast_responder(object):
 
             try:
                 self.ssock.bind(('',self.port))
-            except Exception, e:
+            except Exception as e:
                 dbg("WARNING: Failed to bind %s:%d: %s" , (self.ip,self.port,e))
                 ok = False
 
             try:
                 self.ssock.setsockopt(socket.IPPROTO_IP,socket.IP_ADD_MEMBERSHIP,self.mreq)
-            except Exception, e:
+            except Exception as e:
                 dbg('WARNING: Failed to join multicast group:',e)
                 ok = False
 
-        except Exception, e:
+        except Exception as e:
             dbg("Failed to initialize UPnP sockets:",e)
             return False
         if ok:
@@ -321,6 +322,7 @@ class upnp_broadcast_responder(object):
 
     def do_read(self, fileno):
         data, sender = self.recvfrom(1024)
+        data = data.decode('utf-8')
         if data:
             if data.find('M-SEARCH') == 0 and data.find('urn:Belkin:device:**') != -1:
                 for device in self.devices:
@@ -343,7 +345,7 @@ class upnp_broadcast_responder(object):
                 return self.ssock.recvfrom(size)
             else:
                 return False, False
-        except Exception, e:
+        except Exception as e:
             dbg(e)
             return False, False
 
@@ -417,7 +419,6 @@ while True:
         # Allow time for a ctrl-c to stop the process
         p.poll(100)
         time.sleep(0.1)
-    except Exception, e:
+    except Exception as e:
         dbg(e)
         break
-
