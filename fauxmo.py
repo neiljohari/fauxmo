@@ -35,7 +35,7 @@ import sys
 import time
 import urllib
 import uuid
-
+import RPi.GPIO as GPIO
 
 
 # This XML is the minimum needed to define one of our virtual switches
@@ -374,6 +374,18 @@ class rest_api_handler(object):
         r = requests.get(self.off_cmd)
         return r.status_code == 200
 
+class gpio_handler(object):
+    def __init__(self, pin_number):
+        self.pin = pin_number
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.pin, GPIO.OUT)
+
+    def on(self):
+        GPIO.output(self.pin, 1)
+        return True
+    def off(self):
+        GPIO.output(self.pin, 0)
+        return True
 
 # Each entry is a list with the following elements:
 #
@@ -386,8 +398,9 @@ class rest_api_handler(object):
 # list will be used.
 
 FAUXMOS = [
-    ['office lights', rest_api_handler('http://192.168.5.4/ha-api?cmd=on&a=office', 'http://192.168.5.4/ha-api?cmd=off&a=office')],
-    ['kitchen lights', rest_api_handler('http://192.168.5.4/ha-api?cmd=on&a=kitchen', 'http://192.168.5.4/ha-api?cmd=off&a=kitchen')],
+    #['office lights', rest_api_handler('http://192.168.5.4/ha-api?cmd=on&a=office', 'http://192.168.5.4/ha-api?cmd=off&a=office')],
+    #['kitchen lights', rest_api_handler('http://192.168.5.4/ha-api?cmd=on&a=kitchen', 'http://192.168.5.4/ha-api?cmd=off&a=kitchen')],
+    ['traffic lights', gpio_handler(11),58304],
 ]
 
 
@@ -414,11 +427,15 @@ for one_faux in FAUXMOS:
 
 dbg("Entering main loop\n")
 
-while True:
-    try:
+try:
+    while True:
+        try:
         # Allow time for a ctrl-c to stop the process
-        p.poll(100)
-        time.sleep(0.1)
-    except Exception as e:
-        dbg(e)
-        break
+            p.poll(100)
+            time.sleep(0.1)
+        except Exception, e:
+            dbg(e)
+            break
+
+finally:
+    GPIO.cleanup()
