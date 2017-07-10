@@ -375,16 +375,19 @@ class rest_api_handler(object):
         return r.status_code == 200
 
 class gpio_handler(object):
-    def __init__(self, pin_number):
-        self.pin = pin_number
+    def __init__(self, pin_numbers):
+        self.pins = pin_numbers
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(self.pin, GPIO.OUT)
+        for pin in self.pins:
+            GPIO.setup(pin, GPIO.OUT)
 
     def on(self):
-        GPIO.output(self.pin, 1)
+        for pin in self.pins:
+            GPIO.output(pin, 1)
         return True
     def off(self):
-        GPIO.output(self.pin, 0)
+        for pin in self.pins:
+            GPIO.output(pin, 0)
         return True
 
 # Each entry is a list with the following elements:
@@ -398,11 +401,11 @@ class gpio_handler(object):
 # list will be used.
 
 FAUXMOS = [
-    #['office lights', rest_api_handler('http://192.168.5.4/ha-api?cmd=on&a=office', 'http://192.168.5.4/ha-api?cmd=off&a=office')],
-    #['kitchen lights', rest_api_handler('http://192.168.5.4/ha-api?cmd=on&a=kitchen', 'http://192.168.5.4/ha-api?cmd=off&a=kitchen')],
-    ['traffic lights', gpio_handler(11),58304],
+    ['traffic lights', gpio_handler([11,13,15]),58304],
+    ['red lights', gpio_handler([11]),58305],
+    ['yellow lights', gpio_handler([13]),58306],
+    ['green lights', gpio_handler([15]),58307],
 ]
-
 
 if len(sys.argv) > 1 and sys.argv[1] == '-d':
     DEBUG = True
