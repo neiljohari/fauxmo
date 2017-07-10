@@ -35,7 +35,6 @@ import sys
 import time
 import urllib
 import uuid
-import RPi.GPIO as GPIO
 
 
 # This XML is the minimum needed to define one of our virtual switches
@@ -139,8 +138,8 @@ class upnp_device(object):
             self.ip_address = ip_address
         else:
             self.ip_address = upnp_device.local_ip_address()
-
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.socket.bind((self.ip_address, self.port))
         self.socket.listen(5)
         if self.port == 0:
@@ -374,22 +373,6 @@ class rest_api_handler(object):
         r = requests.get(self.off_cmd)
         return r.status_code == 200
 
-class gpio_handler(object):
-    def __init__(self, pin_numbers):
-        self.pins = pin_numbers
-        GPIO.setmode(GPIO.BCM)
-        for pin in self.pins:
-            GPIO.setup(pin, GPIO.OUT)
-
-    def on(self):
-        for pin in self.pins:
-            GPIO.output(pin, 1)
-        return True
-    def off(self):
-        for pin in self.pins:
-            GPIO.output(pin, 0)
-        return True
-
 # Each entry is a list with the following elements:
 #
 # name of the virtual switch
@@ -401,10 +384,10 @@ class gpio_handler(object):
 # list will be used.
 
 FAUXMOS = [
-    ['traffic lights', gpio_handler([11,13,15]),58304],
-    ['red lights', gpio_handler([11]),58305],
-    ['yellow lights', gpio_handler([13]),58306],
-    ['green lights', gpio_handler([15]),58307],
+    ['all traffic lights', rest_api_handler('http://localhost:4567/ha-api?cmd=on&scope=all','http://localhost:4567/ha-api?cmd=off&scope=all'), 58305],
+    ['red lights', rest_api_handler('http://localhost:4567/ha-api?cmd=on&scope=red','http://localhost:4567/ha-api?cmd=off&scope=red'), 58306],
+    ['yellow lights', rest_api_handler('http://localhost:4567/ha-api?cmd=on&scope=yellow','http://localhost:4567/ha-api?cmd=off&scope=yellow'), 58307],
+    ['green lights', rest_api_handler('http://localhost:4567/ha-api?cmd=on&scope=green','http://localhost:4567/ha-api?cmd=off&scope=green'), 58308],
 ]
 
 if len(sys.argv) > 1 and sys.argv[1] == '-d':
@@ -430,15 +413,11 @@ for one_faux in FAUXMOS:
 
 dbg("Entering main loop\n")
 
-try:
-    while True:
-        try:
-        # Allow time for a ctrl-c to stop the process
-            p.poll(100)
-            time.sleep(0.1)
-        except Exception, e:
-            dbg(e)
-            break
-
-finally:
-    GPIO.cleanup()
+while True:
+    try:
+    # Allow time for a ctrl-c to stop the process
+        p.poll(100)
+        time.sleep(0.1)
+    except Exception as e:
+        dbg(e)
+        break
